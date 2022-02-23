@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  nginx:
+  server:
     image: nginx:stable-alpine
     volumes:
       - ./src:/var/www/html
@@ -12,6 +12,7 @@ services:
       - php
 
   php:
+    image: app:1.0.0
     build:
       context: ./dockerfiles
       dockerfile: php.Dockerfile
@@ -19,6 +20,7 @@ services:
       - ./src/:/var/www/html/:delegated
     depends_on:
       - postgres
+      - redis
 
   postgres:
     image: postgres:13.4-alpine3.14
@@ -34,6 +36,15 @@ services:
       interval: 2s
       timeout: 5s
 
+  redis:
+    image: redis:6.2.6-alpine3.14 
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+
   composer:
     build:
       context: ./dockerfiles
@@ -41,8 +52,22 @@ services:
     volumes:
       - ./src/:/var/www/html/
 
-  # artisan:
-  # npm:
+  artisan:
+    image: app:1.0.0
+    build:
+      context: ./dockerfiles
+      dockerfile: php.Dockerfile
+    entrypoint: ["php", "/var/www/html/artisan"]
+    volumes:
+      - ./src:/var/www/html
+
+  yarn:
+    image: node:14.19.0-alpine3.14
+    working_dir: /var/www/html
+    entrypoint: ["yarn"]
+    volumes:
+      - ./src:/var/www/html
 
 volumes:
   postgres_data:
+  redis_data:
